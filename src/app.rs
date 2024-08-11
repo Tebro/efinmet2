@@ -5,8 +5,8 @@ use crate::metars;
 use cosmic::app::{Command, Core};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::Padding;
-use cosmic::iced::{Alignment, Length, Subscription};
-use cosmic::widget::{self, icon, menu, nav_bar};
+use cosmic::iced::{Alignment, Length};
+use cosmic::widget::{self};
 use cosmic::{Application, ApplicationExt, Apply, Element};
 
 /// The application model stores app-specific state used to describe its interface and
@@ -25,7 +25,6 @@ pub enum Message {
     LoadMetars,
     UpdateMetars(Vec<String>),
     SetError(String),
-    ResetError,
 }
 
 /// Create a COSMIC application from the app model
@@ -190,10 +189,6 @@ impl Application for AppModel {
             Message::SetError(error) => {
                 let full_error = format!("Error (will retry shortly): {}", error);
                 self.error = Some(full_error);
-            }
-
-            Message::ResetError => {
-                self.error = None;
             }
         }
         Command::none()
