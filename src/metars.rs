@@ -29,10 +29,11 @@ async fn fetch_metars_data() -> Result<Vec<Airport>, String> {
             let mut airports = Vec::new();
             for (key, value) in map {
                 if let Value::Object(airport) = value {
+                    println!("{}: {:?}", key, airport);
                     let icao = key;
-                    let lat = airport.get("lat").unwrap().as_f64().unwrap();
-                    let lon = airport.get("lon").unwrap().as_f64().unwrap();
-                    let metar = airport.get("metar").unwrap().as_str().unwrap();
+                    let lat: f64 = airport.get("lat").unwrap().as_str().unwrap().parse().unwrap();
+                    let lon: f64 = airport.get("lon").unwrap().as_str().unwrap().parse().unwrap();
+                    let metar = airport.get("p1").unwrap().as_str().unwrap();
                     airports.push(Airport { icao: icao.to_string(), lat, lon, metar: metar.to_string() });
                 }
             }
@@ -48,7 +49,7 @@ pub async fn fetch_metars() -> Result<Vec<String>, String> {
     //let efhk_metar = "EFHK 191720Z 24008KT 9999 FEW040 BKN060 02/M01 Q1010 NOSIG";
     fetch_metars_data().await.map(|airports| {
         airports.iter().map(|airport| {
-            format!("{}: {}", airport.icao, airport.metar)
+            format!("{}", airport.metar)
         }).collect()
     })
 }
