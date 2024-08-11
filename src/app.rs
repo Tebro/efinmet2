@@ -4,6 +4,7 @@ use crate::fl;
 use crate::metars;
 use cosmic::app::{Command, Core};
 use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced::Padding;
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::widget::{self, icon, menu, nav_bar};
 use cosmic::{Application, ApplicationExt, Apply, Element};
@@ -84,16 +85,36 @@ impl Application for AppModel {
         }
 
         let metar_texts = self.metars.iter().map(|metar| -> Element<Self::Message> {
-            widget::text::Text::new(metar)
+            widget::text::Text::new(metar.strip_prefix("METAR ").unwrap_or(metar))
                 .apply(widget::container)
                 .width(Length::Fill)
-                .height(Length::Fill)
-                .align_x(Horizontal::Center)
+                //.height(Length::Fill)
+                .align_x(Horizontal::Left)
+                .padding(Padding {
+                    left: 10.0,
+                    right: 0.0,
+                    top: 0.0,
+                    bottom: 0.0,
+                })
                 .align_y(Vertical::Center)
                 .into()
         });
 
         let mut col = widget::column();
+
+        col = col.push(
+            widget::text::Text::new("EFIN Metars")
+                .apply(widget::container)
+                .width(Length::Fill)
+                .align_x(Horizontal::Center)
+                .padding(Padding {
+                    left: 0.,
+                    right: 0.0,
+                    top: 0.0,
+                    bottom: 20.0,
+                })
+                .align_y(Vertical::Center),
+        );
 
         for metar_text in metar_texts {
             col = col.push(metar_text);
