@@ -141,35 +141,23 @@ impl Application for AppModel {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::LoadMetars => {
-                let metars = metars::fetch_metars();
+                return cosmic::command::future(async move {
+                    let metars = metars::fetch_metars().await;
 
-                match metars {
-                    Ok(metars) => {
-                        return cosmic::command::batch(vec![
-                            cosmic::command::message(cosmic::app::Message::App(
-                                Message::UpdateMetars(metars),
-                            )),
-                            cosmic::command::message(cosmic::app::Message::App(
-                                Message::ResetError,
-                            )),
-                        ]);
+                    match metars {
+                        Ok(metars) => {
+                            return cosmic::app::Message::App(Message::UpdateMetars(metars));
+                        }
+                        Err(error) => {
+                            return cosmic::app::Message::App(Message::SetError(error.to_string()));
+                        }
                     }
-                    Err(error) => {
-                        return cosmic::command::batch(vec![
-                            cosmic::command::future(async move {
-                                tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
-                                cosmic::app::Message::App(Message::LoadMetars)
-                            }),
-                            cosmic::command::message(cosmic::app::Message::App(Message::SetError(
-                                error.to_string(),
-                            ))),
-                        ]);
-                    }
-                }
+                });
             }
 
             Message::UpdateMetars(metars) => {
                 self.metars = metars;
+                self.error = None;
 
                 // Ugly hack loop?
                 return cosmic::command::future(async move {
