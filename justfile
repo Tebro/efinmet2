@@ -1,5 +1,5 @@
-name := 'cosmic-app-template'
-appid := 'com.example.CosmicAppTemplate'
+name := 'efinmet2'
+appid := 'org.tebro.efinmet2'
 
 rootdir := ''
 prefix := '/usr'
