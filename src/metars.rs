@@ -139,17 +139,11 @@ pub async fn fetch_metars() -> Result<Vec<String>, String> {
         .filter(|pilot| {
             let destination_or_arrival = airports.iter().find(|airport| match &pilot.flight_plan {
                 Some(flight_plan) => {
-                    println!("Airport: {:?}", airport.icao);
-                    println!(
-                        "Arrival: {:?}, Departure: {:?}",
-                        flight_plan.arrival, flight_plan.departure
-                    );
                     flight_plan.arrival == airport.icao || flight_plan.departure == airport.icao
                 }
                 None => false,
             });
 
-            println!("Destination: {:?}", destination_or_arrival);
             if destination_or_arrival.is_none() {
                 return false;
             } else {
