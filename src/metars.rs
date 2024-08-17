@@ -13,6 +13,15 @@ struct Airport {
     metar: String,
 }
 
+impl Airport {
+    fn distance_to(&self, lat: f64, lon: f64) -> f64 {
+        const R: f64 = 6371.0;
+        let x = (self.lon - lon) * PI / 180.0 * ((self.lat + lat) * PI / 180.0).cos();
+        let y = (self.lat - lat) * PI / 180.0;
+        R * (x * x + y * y).sqrt()
+    }
+}
+
 async fn fetch_metars_data() -> Result<Vec<Airport>, String> {
     let response = reqwest::get(METAR_URL).await.or_else(|e| {
         return Err(format!("Failed to fetch METAR data: {}", e));
@@ -81,6 +90,20 @@ struct VatsimPilot {
     flight_plan: Option<VatsimFlightPlan>,
 }
 
+impl VatsimPilot {
+    // relevant_icao() checks if the pilot is flying to or from the provided icao
+    // it uses starts_with() and can therefor be used to match for partial icao codes, like a
+    // country prefix
+    pub fn relevant_icao_start(&self, icao: &String) -> bool {
+        match &self.flight_plan {
+            Some(flight_plan) => {
+                flight_plan.departure.starts_with(icao) || flight_plan.arrival.starts_with(icao)
+            }
+            None => false,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 struct VatsimFlightPlan {
     aircraft_short: String,
@@ -116,47 +139,33 @@ async fn fetch_vatsim_data() -> Result<VatsimData, String> {
 }
 
 pub async fn fetch_metars() -> Result<Vec<String>, String> {
-    let airports = fetch_metars_data().await.or_else(|e| {
-        return Err(format!("Failed to fetch METAR data: {}", e));
-    })?;
-    let data = fetch_vatsim_data().await.or_else(|e| {
-        return Err(format!("Failed to fetch VATSIM data: {}", e));
-    })?;
+    let airports = match fetch_metars_data().await {
+        Ok(data) => data,
+        Err(e) => return Err(format!("Failed to fetch METAR data: {}", e)),
+    };
+    let pilots = match fetch_vatsim_data().await {
+        Ok(data) => data.pilots,
+        Err(e) => return Err(format!("Failed to fetch VATSIM data: {}", e)),
+    };
 
-    let to_or_from_efin: Vec<_> = data
-        .pilots
+    let to_or_from_efin: Vec<_> = pilots
         .iter()
-        .filter(|pilot| match &pilot.flight_plan {
-            Some(flight_plan) => {
-                flight_plan.departure.starts_with("EF") || flight_plan.arrival.starts_with("EF")
-            }
-            None => false,
-        })
+        .filter(|pilot| pilot.relevant_icao_start(&"EF".to_string()))
         .collect();
 
     let within_300nm_of_dest_or_dep: Vec<_> = to_or_from_efin
         .iter()
         .filter(|pilot| {
-            let destination_or_arrival = airports.iter().find(|airport| match &pilot.flight_plan {
-                Some(flight_plan) => {
-                    flight_plan.arrival == airport.icao || flight_plan.departure == airport.icao
-                }
-                None => false,
-            });
+            let departure_or_arrival = airports
+                .iter()
+                .find(|airport| pilot.relevant_icao_start(&airport.icao));
 
-            if destination_or_arrival.is_none() {
-                return false;
-            } else {
-                let destination = destination_or_arrival.unwrap();
-                let distance = {
-                    const R: f64 = 6371.0;
-                    let x = (destination.lon - pilot.longitude) * PI / 180.0
-                        * ((destination.lat + pilot.latitude) * PI / 180.0).cos();
-                    let y = (destination.lat - pilot.latitude) * PI / 180.0;
-                    R * (x * x + y * y).sqrt()
-                };
-                distance < 300.0
-            }
+            let airfield = match departure_or_arrival {
+                Some(airport) => airport,
+                None => return false,
+            };
+
+            airfield.distance_to(pilot.latitude, pilot.longitude) < 300.0
         })
         .collect();
 
@@ -165,12 +174,7 @@ pub async fn fetch_metars() -> Result<Vec<String>, String> {
         .filter(|airport| {
             within_300nm_of_dest_or_dep
                 .iter()
-                .any(|pilot| match &pilot.flight_plan {
-                    Some(flight_plan) => {
-                        flight_plan.arrival == airport.icao || flight_plan.departure == airport.icao
-                    }
-                    None => false,
-                })
+                .any(|pilot| pilot.relevant_icao_start(&airport.icao))
         })
         .map(|airport| airport.metar.clone())
         .collect())
