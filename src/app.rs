@@ -60,10 +60,10 @@ impl Application for AppModel {
 
         // Create a startup command that sets the window title.
         let title_cmd = app.update_title();
-        let loop_starterd_cmd =
+        let loop_started_cmd =
             cosmic::command::message(cosmic::app::Message::App(Message::LoadMetars));
 
-        let command = cosmic::command::batch(vec![title_cmd, loop_starterd_cmd]);
+        let command = cosmic::command::batch(vec![title_cmd, loop_started_cmd]);
 
         (app, command)
     }
