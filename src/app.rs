@@ -6,7 +6,7 @@ use cosmic::app::{Command, Core};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::Padding;
 use cosmic::iced::{Alignment, Length};
-use cosmic::widget::{self};
+use cosmic::widget;
 use cosmic::{Application, ApplicationExt, Apply, Element};
 
 /// The application model stores app-specific state used to describe its interface and
